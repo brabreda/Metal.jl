@@ -185,4 +185,28 @@ end
     # TODO
 end
 
+# subgroups
+
+@device_override @inline function KA.__subgroupsize() 
+    return 32
+end
+
+@device_override @inline function KA.__subgroupreduce(op,val)
+    offset = 0x00000001
+    while offset < 32
+        val = op(val, Metal.simd_shuffle_down(val, offset))
+        offset <<= 1
+    end
+
+    return val
+end
+
+
+function KA.get_reduce_config(::MetalBackend, op, ::Type{T}) where T
+    
+    # be conservative with types used for warpreduction
+    # warps = T <: Union{Float32, Float16, Int32, UInt32, Int16, UInt16, Int8, UInt8}
+
+    return KA.Config(1024, 32, 1024 * 64, 16, false, false)
+end
 end
